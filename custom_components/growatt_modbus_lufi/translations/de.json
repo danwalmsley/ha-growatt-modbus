@@ -51,12 +51,14 @@
         "title": "Growatt SPH Modbus Optionen",
         "data": {
           "scan_interval": "Abfrageintervall Messwerte (Sekunden)",
+          "power_scan_interval": "Hochfrequente Leistungsabfrage",
           "notify_enabled": "Benachrichtigung bei Störung",
           "notify_entity": "Benachrichtigungs-Entität",
           "energy_scan_interval": "Abfrageintervall Energiezähler (Sekunden)",
           "settings_scan_interval": "Abfrageintervall Einstellungen (Sekunden)"
         },
         "data_description": {
+          "power_scan_interval": "Aus behält das bisherige Verhalten bei. Wenn aktiviert, sind die hochfrequenten Abfragen auf schmale Registerblöcke für PV-Leistung, Batterieleistung, Netzbezug/-einspeisung und lokale Last begrenzt.",
           "notify_enabled": "Sendet eine Nachricht, wenn eine echte Störung auftritt oder behoben ist (Warnungen ausgenommen)."
         }
       }

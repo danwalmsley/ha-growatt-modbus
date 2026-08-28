@@ -17,6 +17,7 @@ Local Modbus integration for Growatt hybrid inverters (SPH / SPH TL3 series) —
 - **Automatic inverter detection**: device type code and tracker/phase count are read from holding registers 43/44, selecting the correct profile (1-phase SPH vs. 3-phase SPH TL3) automatically — manual override available
 - **Multiple inverters**: add one config entry per inverter; several slave IDs can share the same RS485 bus or TCP gateway
 - **Efficient polling**: registers are read in blocks (6 transactions per cycle instead of ~90 single reads)
+- **Optional fast power polling**: narrow register blocks for PV, battery, grid import/export and local load power can be refreshed every 0.5 s or 0.25 s without polling all live registers at that rate
 - **Multilingual**: English and German UI, translated enum states (status, priority, derating, ...)
 - **65+ entities** per inverter: PV, grid (per-phase on TL3), battery, EPS, energy counters, temperatures, fault registers
 - **Writable settings**: power on/off (switch), minimum discharge SoC and maximum active power (numbers)
@@ -102,7 +103,9 @@ Choose the connection type:
 
 For a second inverter simply add the integration again with the other slave ID (same port/host is fine — the bus is shared safely).
 
-The polling interval (default 30 s) can be changed under *Configure* on the integration entry.
+The polling interval (default 30 s) can be changed under *Configure* on the integration entry. High-frequency power polling is off by default, preserving the existing behavior. It can be set to 0.5 s or 0.25 s independently; all other live values continue to use the regular live interval, while energy counters and settings keep their separate slower intervals.
+
+Start with 0.5 s and monitor Home Assistant's log for Modbus timeouts. Try 0.25 s only if the connection is stable, especially on a 9600-baud serial bus or when several inverters share one bus.
 
 > **Important:** the serial port must not be used by another integration (e.g. the built-in `modbus:` YAML integration) at the same time.
 
