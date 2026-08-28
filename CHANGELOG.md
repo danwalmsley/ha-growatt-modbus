@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## [0.10.0] - 2026-08-28
 
 - Add optional 0.5 s and 0.25 s high-frequency polling for PV power,
   battery charge/discharge power, grid import/export power and local load power.
