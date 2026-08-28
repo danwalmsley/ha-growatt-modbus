@@ -18,27 +18,30 @@ from homeassistant.helpers import selector
 
 from .const import (
     BAUDRATES,
+    CONF_BAUDRATE,
+    CONF_CONNECTION_TYPE,
     CONF_ENERGY_SCAN_INTERVAL,
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_ENTITY,
-    CONF_SETTINGS_SCAN_INTERVAL,
-    DEFAULT_ENERGY_SCAN_INTERVAL,
-    DEFAULT_SETTINGS_SCAN_INTERVAL,
-    CONF_BAUDRATE,
-    CONF_CONNECTION_TYPE,
+    CONF_POWER_SCAN_INTERVAL,
     CONF_PROFILE,
     CONF_SCAN_INTERVAL,
     CONF_SERIAL_PORT,
+    CONF_SETTINGS_SCAN_INTERVAL,
     CONF_SLAVE_ID,
     CONNECTION_SERIAL,
     CONNECTION_TCP,
     DEFAULT_BAUDRATE,
+    DEFAULT_ENERGY_SCAN_INTERVAL,
+    DEFAULT_POWER_SCAN_INTERVAL,
     DEFAULT_PROFILE,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SETTINGS_SCAN_INTERVAL,
     DEFAULT_SLAVE_ID,
     DEFAULT_TCP_PORT,
     DOMAIN,
     PROFILE_AUTO,
+    POWER_SCAN_INTERVALS,
 )
 from .modbus_client import GrowattModbusClient, GrowattModbusError
 from .registers import (
@@ -233,6 +236,12 @@ class GrowattOptionsFlow(OptionsFlow):
                     CONF_SCAN_INTERVAL,
                     default=options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                 ): vol.All(vol.Coerce(int), vol.Range(min=5, max=600)),
+                vol.Required(
+                    CONF_POWER_SCAN_INTERVAL,
+                    default=options.get(
+                        CONF_POWER_SCAN_INTERVAL, DEFAULT_POWER_SCAN_INTERVAL
+                    ),
+                ): vol.In(POWER_SCAN_INTERVALS),
                 vol.Required(
                     CONF_ENERGY_SCAN_INTERVAL,
                     default=options.get(

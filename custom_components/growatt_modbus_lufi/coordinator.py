@@ -14,10 +14,12 @@ from .const import (
     CONF_ENERGY_SCAN_INTERVAL,
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_ENTITY,
+    CONF_POWER_SCAN_INTERVAL,
     CONF_SCAN_INTERVAL,
     CONF_SETTINGS_SCAN_INTERVAL,
     CONF_SLAVE_ID,
     DEFAULT_ENERGY_SCAN_INTERVAL,
+    DEFAULT_POWER_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SETTINGS_SCAN_INTERVAL,
     DEFAULT_SLAVE_ID,
@@ -26,7 +28,8 @@ from .const import (
 from .modbus_client import GrowattModbusClient, GrowattModbusError
 from .registers import (
     GROUP_ENERGY,
-    GROUP_FAST,
+    GROUP_LIVE,
+    GROUP_POWER,
     GROUP_SETTINGS,
     REG_DERIVED,
     REG_HOLDING,
@@ -43,7 +46,7 @@ RegisterData = dict[str, dict[int, int]]
 
 
 class GrowattCoordinator(DataUpdateCoordinator[RegisterData]):
-    """Polls all register blocks of one inverter."""
+    """Poll one inverter using independent power, live and slow groups."""
 
     def __init__(
         self,
@@ -53,20 +56,28 @@ class GrowattCoordinator(DataUpdateCoordinator[RegisterData]):
         profile: DeviceProfile,
     ) -> None:
         scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        self._power_scan_interval = float(
+            entry.options.get(
+                CONF_POWER_SCAN_INTERVAL, DEFAULT_POWER_SCAN_INTERVAL
+            )
+        )
+        coordinator_interval = self._power_scan_interval or scan_interval
         super().__init__(
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.title}",
-            update_interval=timedelta(seconds=scan_interval),
+            update_interval=timedelta(seconds=coordinator_interval),
         )
         self.entry = entry
         self.client = client
         self.profile = profile
         self.slave_id: int = entry.data.get(CONF_SLAVE_ID, DEFAULT_SLAVE_ID)
-        self._plan = profile.polling_plan()
+        self._fast_power_enabled = self._power_scan_interval > 0
+        self._plan = profile.polling_plan(self._fast_power_enabled)
         self._had_fault: bool | None = None
         self._refresh_settings = False
         self._group_interval = {
+            GROUP_LIVE: scan_interval,
             GROUP_ENERGY: entry.options.get(
                 CONF_ENERGY_SCAN_INTERVAL, DEFAULT_ENERGY_SCAN_INTERVAL
             ),
@@ -74,7 +85,11 @@ class GrowattCoordinator(DataUpdateCoordinator[RegisterData]):
                 CONF_SETTINGS_SCAN_INTERVAL, DEFAULT_SETTINGS_SCAN_INTERVAL
             ),
         }
-        self._next_due = {GROUP_ENERGY: 0.0, GROUP_SETTINGS: 0.0}
+        self._next_due = {
+            GROUP_LIVE: 0.0,
+            GROUP_ENERGY: 0.0,
+            GROUP_SETTINGS: 0.0,
+        }
         self.settings_read_at: datetime | None = None
         # Decoded fault diagnostics for the active/last fault sensors
         self.active_faults: list[str] = []
@@ -88,7 +103,9 @@ class GrowattCoordinator(DataUpdateCoordinator[RegisterData]):
             REG_HOLDING: dict(previous.get(REG_HOLDING, {})),
         }
 
-        groups = [GROUP_FAST]
+        groups = [GROUP_POWER] if self._fast_power_enabled else []
+        if now >= self._next_due[GROUP_LIVE]:
+            groups.append(GROUP_LIVE)
         if now >= self._next_due[GROUP_ENERGY]:
             groups.append(GROUP_ENERGY)
         if self._refresh_settings or now >= self._next_due[GROUP_SETTINGS]:
@@ -106,7 +123,7 @@ class GrowattCoordinator(DataUpdateCoordinator[RegisterData]):
         except GrowattModbusError as err:
             raise UpdateFailed(str(err)) from err
 
-        for group in (GROUP_ENERGY, GROUP_SETTINGS):
+        for group in (GROUP_LIVE, GROUP_ENERGY, GROUP_SETTINGS):
             if group in groups:
                 self._next_due[group] = now + self._group_interval[group]
         if GROUP_SETTINGS in groups:
